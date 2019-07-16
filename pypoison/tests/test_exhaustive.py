@@ -297,12 +297,6 @@ class TestBuiltins(unittest.TestCase):
 
     @unittest.skipIf(not DEBUG_TESTS, reason='DEBUG_TESTS not set')
     def test_prints(self):
-        def subclass_thing():
-            class Foo(pypoison._impl.Poison):
-                def foo(self):
-                    print('yay')
-            return Foo is None
-
         print('Version:', PYV)
         LAMBDAS = [
             lambda: bytearray(poison()),
@@ -323,6 +317,7 @@ class TestBuiltins(unittest.TestCase):
             # Version: (3, 6, 8) → Tried to access __iter__ on poison value.
             # Version: (3, 7, 1) → Tried to access __getattribute__ on poison value.
             # Version: (3, 7, 3) → Tried to access __getattribute__ on poison value.
+            # Seems to depend on whether insertion order is guaranteed.  Great!
         ]
 
         for i, l in enumerate(LAMBDAS):
