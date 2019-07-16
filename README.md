@@ -29,7 +29,9 @@ There are no dependencies.
 
 ## Usage
 
-Just use the value `pypoison.POISON` when you need a poison value.
+Just use the value returned by `pypoison.get_poison()` when you need a poison value.
+
+The object is always the same object.
 
 ### Custom behavior
 
@@ -48,27 +50,27 @@ To reset to the default behavior, you can call `pypoison.set_exception(None)`
 ### Examples
 
 ```python
->>> 1 in pypoison.POISON
+>>> 1 in pypoison.get_poison()
 ValueError: Tried to access __contains__ on poison value.
->>> pypoison.POISON / 1
-ValueError: Tried to access __div__ on poison value.
+>>> pypoison.get_poison() / 1
+ValueError: Tried to access __truediv__ on poison value.
 >>> 1 + Foo()
 ValueError: Tried to access __radd__ on poison value.
->>> pypoison.POISON * 4
+>>> pypoison.get_poison() * 4
 ValueError: Tried to access __mul__ on poison value.
->>> pypoison.POISON % 3
+>>> pypoison.get_poison() % 3
 ValueError: Tried to access __mod__ on poison value.
->>> 3 % pypoison.POISON
+>>> 3 % pypoison.get_poison()
 ValueError: Tried to access __rmod__ on poison value.
->>> '{}'.format(pypoison.POISON)
+>>> '{}'.format(pypoison.get_poison())
 ValueError: Tried to access __format__ on poison value.
->>> '{!r}'.format(pypoison.POISON)
+>>> '{!r}'.format(pypoison.get_poison())
 ValueError: Tried to access __repr__ on poison value.
->>> list(pypoison.POISON)
+>>> list(pypoison.get_poison())
 ValueError: Tried to access __iter__ on poison value.
->>> help(pypoison.POISON)
+>>> help(pypoison.get_poison())
 ValueError: Tried to access __getattribute__ on poison value.
->>> pypoison.POISON == 42
+>>> pypoison.get_poison() == 42
 ValueError: Tried to access __eq__ on poison value.
 ```
 
@@ -76,31 +78,31 @@ ValueError: Tried to access __eq__ on poison value.
 
 ### Serious
 
-Heavy use of the `inspect` module might fiddle around with `pypoison.POISON`, however
-safeguards are in place to make sure that accidental calls result in exceptions.
+Heavy use of the `inspect` module might fiddle around with the poison object,
+however safeguards are in place to make sure that this is not easy.
 
-Accidental assignment to `pypoison.POISON` is still possible.
-[This can be prevented.](https://stackoverflow.com/a/3712574/3070326)
-
-Passive use, such as `is` or storing a pointer cannot be prevented.
-However, this is intentionl. It is a poisonous placeholder value.
+Passive use, such as `is` or storing it in a passive container (e.g. a list)
+cannot be prevented.  However, this is intentionl. This module wants to
+provide a poisonous placeholder value, and not an actively malicious value.
 
 I am not sure how to handle `callable()`, `id()`, and `type`.
 
-Logically-null usage cannot be detected, such as in `pypoison.POISON in []` or `True or `.
+Logically-null usage cannot be detected, such as in `pypoison.get_poison() in []` or `True or pypoison.get_poison()`.
 
 This module [may cause bugs](https://github.com/bpython/bpython/issues/776)
 in your debugger/IDE/editor.  Or at least unexpected behavior.
 
+Do not store the poison value in a global.  Many tools, e.g. unittest,
+walk the global variables and inspect them.
+
 ### Non-serious
 
-The amount of black magic might poison your appreciation of Python.
+The amount of black magic might *poison* your appreciation of Python.
 
-Python is always nonvenomous; this module makes it poisonous!
+Pythonidae are always *[nonvenomous](https://en.wikipedia.org/wiki/Pythonidae)*; this module makes it *poisonous*!
 
 ## TODOs
 
-* Prevent assignment
 * Test
 * Tell people about it
 
