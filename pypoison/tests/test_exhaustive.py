@@ -7,6 +7,7 @@ import sys
 import unittest
 
 
+DEBUG_TESTS = False
 PYV = (sys.version_info.major, sys.version_info.minor, sys.version_info.micro)
 
 
@@ -114,21 +115,23 @@ class TestMethods(unittest.TestCase):
             self.fail('Expected exception about __{}__, passed instead.'.format(prop))
 
     def test_init_subclass_long(self):
-        prop = 'init_subclass'
-        actual = None
+        actual = ('Pass', None)
         try:
             class Foo(pypoison._impl.Poison):
                 def foo(self):
                     print('yay')
         except ValueError as e:
             actual = ('ValueError', e.args)
-            self.assertEqual('Tried to access __{}__ on poison value.'.format(prop), e.args[0])
         except BaseException as e:
             actual = ('Other', e)
-            self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, e))
+
+        if PYV >= (3, 6, 0):
+            # __init_subclass__ got introduced in PEP 487, which got incorporated in 3.6.0.
+            expected = ('ValueError', ('Tried to access __init_subclass__ on poison value.',))
         else:
-            self.fail('Expected exception about __{}__, passed instead.'.format(prop))
-        # FIXME
+            # Should not call it (yet).
+            expected = ('Pass', None)
+        self.assertEqual(expected, actual)
 
 
 # TODO untested: breakpoint, compile, exec, globals, locals, open, super
@@ -141,12 +144,10 @@ class TestBuiltins(unittest.TestCase):
         ('repr', lambda: ascii(poison())),
         ('index', lambda: bin(poison())),
         ('bool', lambda: bool(poison())),
-        ('index' if PYV > (3, 7, 1) else 'iter', lambda: bytearray(poison())),  # exact version unknown
-        ('index' if PYV > (3, 7, 1) else 'iter', lambda: bytes(poison())),  # exact version unknown
         ('int', lambda: chr(poison())),
         ('float', lambda: complex(poison())),
         ('delattr', lambda: delattr(poison(), 'foo')),
-        ('getattribute' if PYV >= (3, 6, 0) else 'iter', lambda: dict(poison())),
+        ('getattribute' if PYV >= (3, 7, 0) else 'iter', lambda: dict(poison())),
         ('dir', lambda: dir(poison())),
         ('divmod', lambda: divmod(poison(), 42)),
         ('rdivmod', lambda: divmod(42, poison())),
@@ -228,6 +229,36 @@ class TestBuiltins(unittest.TestCase):
     def setUp(self):
         pypoison.set_exception(None)
 
+    def test_bytearray(self):
+        # See `test_prints`.
+        props = ['index', 'iter']
+        try:
+            bytearray(poison())
+        except ValueError as e:
+            self.assertEqual(1, len(e.args))
+            expected = ['Tried to access __{}__ on poison value.'.format(p) for p in props]
+            self.assertIn(e.args[0], expected)
+        except BaseException as e:
+            self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, e))
+        else:
+            self.fail('Expected exception about __{}__, passed instead.'.format(prop))
+
+    def test_bytes(self):
+        # See `test_prints`.
+        props = ['index', 'len']
+        try:
+            bytes(poison())
+        except ValueError as e:
+            self.assertEqual(1, len(e.args))
+            expected = ['Tried to access __{}__ on poison value.'.format(p) for p in props]
+            self.assertIn(e.args[0], expected)
+        except TypeError as e:
+            self.assertEqual(e.args[0], "cannot convert 'Poison' object to bytes")
+        except BaseException as e:
+            self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, e))
+        else:
+            self.fail('Expected exception about __{}__, passed instead.'.format(prop))
+
     def test_value_error(self):
         for i, (prop, lambda_) in enumerate(TestBuiltins.CASES_VALUE_ERROR):
             with self.subTest(i=i, prop=prop) as subtest:
@@ -264,6 +295,7 @@ class TestBuiltins(unittest.TestCase):
                 else:
                     self.assertEqual(expected, actual)
 
+    @unittest.skipIf(not DEBUG_TESTS, reason='DEBUG_TESTS not set')
     def test_prints(self):
         def subclass_thing():
             class Foo(pypoison._impl.Poison):
@@ -274,10 +306,25 @@ class TestBuiltins(unittest.TestCase):
         print('Version:', PYV)
         LAMBDAS = [
             lambda: bytearray(poison()),
+            # Version: (3, 5, 6) → Tried to access __iter__ on poison value.
+            # Version: (3, 6, 3) → Tried to access __iter__ on poison value.
+            # Version: (3, 6, 8) → Tried to access __index__ on poison value.
+            # Version: (3, 7, 1) → Tried to access __iter__ on poison value.
+            # Version: (3, 7, 3) → Tried to access __index__ on poison value.
             lambda: bytes(poison()),
+            # Version: (3, 5, 6) → Tried to access __len__ on poison value.
+            # Version: (3, 6, 3) → cannot convert 'Poison' object to bytes
+            # Version: (3, 6, 8) → Tried to access __index__ on poison value.
+            # Version: (3, 7, 1) → cannot convert 'Poison' object to bytes
+            # Version: (3, 7, 3) → Tried to access __index__ on poison value.
             lambda: dict(poison()),
-            subclass_thing,
+            # Version: (3, 5, 6) → Tried to access __iter__ on poison value.
+            # Version: (3, 6, 3) → Tried to access __iter__ on poison value.
+            # Version: (3, 6, 8) → Tried to access __iter__ on poison value.
+            # Version: (3, 7, 1) → Tried to access __getattribute__ on poison value.
+            # Version: (3, 7, 3) → Tried to access __getattribute__ on poison value.
         ]
+
         for i, l in enumerate(LAMBDAS):
             try:
                 l()
