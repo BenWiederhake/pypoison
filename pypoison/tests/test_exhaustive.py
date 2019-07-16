@@ -190,7 +190,7 @@ class TestBuiltins(unittest.TestCase):
         ('eval() arg 1 must be a string, bytes or code object', eval),
         ("memoryview: a bytes-like object is required, not 'Poison'", memoryview),
         ("'Poison' object is not an iterator", next),
-        ('object() takes no arguments', object),
+        (['object() takes no arguments', 'object() takes no parameters'], object),
         ('ord() expected string of length 1, but Poison found', ord),
         ('vars() argument must have __dict__ attribute', vars),
         ('__import__() argument 1 must be str, not Poison', __import__),
@@ -238,7 +238,11 @@ class TestBuiltins(unittest.TestCase):
                 try:
                     fn(poison())
                 except TypeError as e:
-                    self.assertEqual((msg,), e.args)
+                    self.assertEqual(1, len(e.args))
+                    if isinstance(e, list):
+                        self.assertIn(e.args[0], msg)
+                    else:
+                        self.assertEqual(e.args[0], msg)
                 except BaseException as e:
                     self.fail('Expected TypeError({}), got "{}" instead.'.format(msg, e))
                 else:
