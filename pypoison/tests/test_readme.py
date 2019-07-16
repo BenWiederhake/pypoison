@@ -102,7 +102,7 @@ class TestExamples(unittest.TestCase):
         # callable():
         self.assertFalse(callable(poison()))
         # id():
-        self.assertNotEqual(id(poison()), 42)  # Technically flaky
+        self.assertNotEqual(id(poison()), 'lolwut')
         # type():
         self.assertNotEqual(type(poison()), int)
 
