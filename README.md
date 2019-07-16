@@ -104,8 +104,7 @@ Pythonidae are always *[nonvenomous](https://en.wikipedia.org/wiki/Pythonidae)*;
 
 ## TODOs
 
-* Test
-* Tell people about it
+* Do weird stuff with it
 
 ## Contribute
 
