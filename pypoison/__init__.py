@@ -13,5 +13,3 @@ This module provides an object that overrides all methods to raise an exception.
 """
 
 from ._impl import get_poison, set_exception, set_handler
-
-__all__ = ['get_poison', 'set_exception', 'set_handler']
