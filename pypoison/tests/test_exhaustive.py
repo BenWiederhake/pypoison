@@ -3,7 +3,11 @@
 # MIT license.  See the LICENSE file included in the package.
 
 import pypoison
+import sys
 import unittest
+
+
+PYV = (sys.version_info.major, sys.version_info.minor, sys.version_info.micro)
 
 
 # Don't store this in a global: `unittest` would choke.
@@ -111,16 +115,20 @@ class TestMethods(unittest.TestCase):
 
     def test_init_subclass_long(self):
         prop = 'init_subclass'
+        actual = None
         try:
             class Foo(pypoison._impl.Poison):
                 def foo(self):
                     print('yay')
         except ValueError as e:
+            actual = ('ValueError', e.args)
             self.assertEqual('Tried to access __{}__ on poison value.'.format(prop), e.args[0])
         except BaseException as e:
+            actual = ('Other', e)
             self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, e))
         else:
             self.fail('Expected exception about __{}__, passed instead.'.format(prop))
+        # FIXME
 
 
 # TODO untested: breakpoint, compile, exec, globals, locals, open, super
@@ -133,12 +141,12 @@ class TestBuiltins(unittest.TestCase):
         ('repr', lambda: ascii(poison())),
         ('index', lambda: bin(poison())),
         ('bool', lambda: bool(poison())),
-        ('index', lambda: bytearray(poison())),
-        ('index', lambda: bytes(poison())),
+        ('index' if PYV > (3, 7, 1) else 'iter', lambda: bytearray(poison())),  # exact version unknown
+        ('index' if PYV > (3, 7, 1) else 'iter', lambda: bytes(poison())),  # exact version unknown
         ('int', lambda: chr(poison())),
         ('float', lambda: complex(poison())),
         ('delattr', lambda: delattr(poison(), 'foo')),
-        ('getattribute', lambda: dict(poison())),
+        ('getattribute' if PYV >= (3, 6, 0) else 'iter', lambda: dict(poison())),
         ('dir', lambda: dir(poison())),
         ('divmod', lambda: divmod(poison(), 42)),
         ('rdivmod', lambda: divmod(42, poison())),
@@ -190,7 +198,7 @@ class TestBuiltins(unittest.TestCase):
         ('eval() arg 1 must be a string, bytes or code object', eval),
         ("memoryview: a bytes-like object is required, not 'Poison'", memoryview),
         ("'Poison' object is not an iterator", next),
-        (['object() takes no arguments', 'object() takes no parameters'], object),
+        ('object() takes no arguments' if PYV >= (3, 7, 0) else 'object() takes no parameters', object),
         ('ord() expected string of length 1, but Poison found', ord),
         ('vars() argument must have __dict__ attribute', vars),
         ('__import__() argument 1 must be str, not Poison', __import__),
@@ -226,7 +234,9 @@ class TestBuiltins(unittest.TestCase):
                 try:
                     lambda_()
                 except ValueError as e:
-                    self.assertEqual('Tried to access __{}__ on poison value.'.format(prop), e.args[0])
+                    self.assertEqual(1, len(e.args))
+                    expected = 'Tried to access __{}__ on poison value.'.format(prop)
+                    self.assertEqual(e.args[0], expected)
                 except BaseException as e:
                     self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, e))
                 else:
@@ -239,10 +249,7 @@ class TestBuiltins(unittest.TestCase):
                     fn(poison())
                 except TypeError as e:
                     self.assertEqual(1, len(e.args))
-                    if isinstance(e, list):
-                        self.assertIn(e.args[0], msg)
-                    else:
-                        self.assertEqual(e.args[0], msg)
+                    self.assertEqual(e.args[0], msg)
                 except BaseException as e:
                     self.fail('Expected TypeError({}), got "{}" instead.'.format(msg, e))
                 else:
@@ -256,3 +263,28 @@ class TestBuiltins(unittest.TestCase):
                     self.assertNotEqual(expected, actual)
                 else:
                     self.assertEqual(expected, actual)
+
+    def test_prints(self):
+        def subclass_thing():
+            class Foo(pypoison._impl.Poison):
+                def foo(self):
+                    print('yay')
+            return Foo is None
+
+        print('Version:', PYV)
+        LAMBDAS = [
+            lambda: bytearray(poison()),
+            lambda: bytes(poison()),
+            lambda: dict(poison()),
+            subclass_thing,
+        ]
+        for i, l in enumerate(LAMBDAS):
+            try:
+                l()
+            except BaseException as e:
+                print(i, e)
+            else:
+                print(i, 'Pass')
+        print('Done')
+        # Ensure we get printed
+        raise AssertionError('Boo!')
