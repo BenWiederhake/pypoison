@@ -85,9 +85,10 @@ Passive use, such as `is` or storing it in a passive container (e.g. a list)
 cannot be prevented.  However, this is intentionl. This module wants to
 provide a poisonous placeholder value, and not an actively malicious value.
 
-I am not sure how to handle `callable()`, `id()`, and `type`.
+I am not sure how to handle `callable()`, `id()`, and `type()`.
 
-Logically-null usage cannot be detected, such as in `pypoison.get_poison() in []` or `True or pypoison.get_poison()`.
+Logically-null usage cannot be detected, such as in `pypoison.get_poison() in []`
+or `True or pypoison.get_poison()` or even `max([pypoison.get_poison()])`.
 
 This module [may cause bugs](https://github.com/bpython/bpython/issues/776)
 in your debugger/IDE/editor.  Or at least unexpected behavior.
