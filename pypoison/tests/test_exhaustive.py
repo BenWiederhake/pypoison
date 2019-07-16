@@ -87,8 +87,8 @@ class TestMethods(unittest.TestCase):
         pypoison.set_exception(None)
 
     def test_simple(self):
-        for prop, lambda_ in TestMethods.CASES:
-            with self.subTest(prop=prop) as subtest:
+        for i, (prop, lambda_) in enumerate(TestMethods.CASES):
+            with self.subTest(i=i, prop=prop) as subtest:
                 try:
                     lambda_()
                 except ValueError as e:
@@ -221,8 +221,8 @@ class TestBuiltins(unittest.TestCase):
         pypoison.set_exception(None)
 
     def test_value_error(self):
-        for prop, lambda_ in TestBuiltins.CASES_VALUE_ERROR:
-            with self.subTest(prop=prop) as subtest:
+        for i, (prop, lambda_) in enumerate(TestBuiltins.CASES_VALUE_ERROR):
+            with self.subTest(i=i, prop=prop) as subtest:
                 try:
                     lambda_()
                 except ValueError as e:
