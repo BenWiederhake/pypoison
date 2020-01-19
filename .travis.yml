@@ -3,13 +3,8 @@ sudo: false
 python:
   - 3.5
   - 3.6
-#  - 3.7
-# See https://github.com/travis-ci/travis-ci/issues/9815
-matrix:
-  include:
-    - python: 3.7
-      dist: xenial
-      sudo: true
+  - 3.7
+  - 3.8
 script:
   - python --version
   - python setup.py build
@@ -17,4 +12,4 @@ script:
   - python -m pip install setuptools twine wheel
   - python setup.py sdist bdist_wheel
   - python setup.py install
-#  - for i in examples/*.py ; do $i ; $i ; $i ; done
+#  - for i in ./examples/*.py ; do $i ; done

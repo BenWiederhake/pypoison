@@ -14,7 +14,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='pypoison',
-    version='0.0.1',
+    version='0.0.2',
     packages=['pypoison'],
     install_requires=[],
     author='Ben Wiederhake',
@@ -32,5 +32,6 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
 )
