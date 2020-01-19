@@ -106,6 +106,15 @@ Pythonidae are always *[nonvenomous](https://en.wikipedia.org/wiki/Pythonidae)*;
 
 * Do weird stuff with it
 
+## How to make a new release
+
+This is a summary of [the guide](https://packaging.python.org/tutorials/packaging-projects/#generating-distribution-archives).
+
+- `$ pip3 install setuptools wheel twine`
+- `$ setup.py sdist bdist_wheel`
+- `$ ls dist/  # Does this look reasonable?`
+- `$ python3 -m twine upload -u ben_vuK7p dist/*`
+
 ## Contribute
 
 Feel free to dive in! [Open an issue](https://github.com/BenWiederhake/pypoison/issues/new) or submit PRs.
