@@ -3,7 +3,11 @@
 # MIT license.  See the LICENSE file included in the package.
 
 import pypoison
+import sys
 import unittest
+
+
+PYV = (sys.version_info.major, sys.version_info.minor, sys.version_info.micro)
 
 
 # Don't store this in a global: `unittest` would choke.
@@ -70,7 +74,7 @@ class TestExamples(unittest.TestCase):
         ('rmod', lambda: 3 % poison()),
         ('format', lambda: '{}'.format(poison())),
         ('repr', lambda: '{!r}'.format(poison())),
-        ('iter', lambda: list(poison())),
+        ('len' if PYV >= (3, 8, 0) else 'iter', lambda: list(poison())),
         ('getattribute', lambda: help(poison())),
         ('eq', lambda: poison() == 42),
     ]

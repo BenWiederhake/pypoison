@@ -48,7 +48,7 @@ class TestMethods(unittest.TestCase):
         ('index', lambda: [4, -2, 1][poison()]),
         ('int', lambda: int(poison())),
         ('invert', lambda: ~poison()),
-        ('iter', lambda: list(poison())),
+        ('len' if PYV >= (3, 8, 0) else 'iter', lambda: list(poison())),
         ('iter', lambda: set(poison())),
         ('iter', lambda: enumerate(poison())),
         ('le', lambda: poison() <= 9),
@@ -144,7 +144,7 @@ class TestBuiltins(unittest.TestCase):
         ('repr', lambda: ascii(poison())),
         ('index', lambda: bin(poison())),
         ('bool', lambda: bool(poison())),
-        ('int', lambda: chr(poison())),
+        ('index' if PYV >= (3, 8, 0) else 'int', lambda: chr(poison())),
         ('float', lambda: complex(poison())),
         ('delattr', lambda: delattr(poison(), 'foo')),
         ('getattribute' if PYV >= (3, 7, 0) else 'iter', lambda: dict(poison())),
@@ -169,7 +169,7 @@ class TestBuiltins(unittest.TestCase):
         ('getattribute', lambda: issubclass(str, poison())),
         ('iter', lambda: iter(poison())),
         ('len', lambda: len(poison())),
-        ('iter', lambda: list(poison())),
+        ('len' if PYV >= (3, 8, 0) else 'iter', lambda: list(poison())),
         ('iter', lambda: map(id, poison())),
         ('iter', lambda: max(poison())),
         ('iter', lambda: min(poison())),
@@ -201,7 +201,6 @@ class TestBuiltins(unittest.TestCase):
         ("'Poison' object is not an iterator", next),
         ('object() takes no arguments' if PYV >= (3, 7, 0) else 'object() takes no parameters', object),
         ('ord() expected string of length 1, but Poison found', ord),
-        ('vars() argument must have __dict__ attribute', vars),
         ('__import__() argument 1 must be str, not Poison', __import__),
     ]
 
@@ -217,7 +216,6 @@ class TestBuiltins(unittest.TestCase):
         # I don't like that the following tests pass,
         # but they seem to only store the argument without doing anything.
         ('undescribable', lambda: classmethod(poison())),
-        ('undescribable', lambda: property(poison())),
         ('undescribable', lambda: staticmethod(poison())),
         ('undescribable', lambda: slice(poison())),
         ('undescribable', lambda: slice(poison(), 3)),
@@ -226,8 +224,28 @@ class TestBuiltins(unittest.TestCase):
         ('undescribable', lambda: slice(1, poison(), 2)),
     ]
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         pypoison.set_exception(None)
+
+        # ==== Weird behavior changes: ====
+
+        # == `vars`:
+        if PYV >= (3, 8, 0):
+            # 3.8.0: accesses `__getattribute__`, raises *Value*Error.
+            TestBuiltins.CASES_VALUE_ERROR.append(('getattribute', lambda: vars(poison())))
+        else:
+            # 3.7.5 and down: accesses `__dict__`, raises custom *Type*Error.
+            TestBuiltins.CASES_TYPE_ERROR.append(('vars() argument must have __dict__ attribute', vars))
+
+        # == `property`:
+        if PYV >= (3, 8, 0):
+            # 3.8.0: accesses `__getattribute__`, raises ValueError.
+            TestBuiltins.CASES_VALUE_ERROR.append(('getattribute', lambda: property(poison())))
+        else:
+            # 3.7.5 and down: no accesses at all.
+            TestBuiltins.CASES_SUCCESS.append(('undescribable', lambda: property(poison())))
+
 
     def test_bytearray(self):
         # See `test_prints`.
@@ -239,7 +257,7 @@ class TestBuiltins(unittest.TestCase):
             expected = ['Tried to access __{}__ on poison value.'.format(p) for p in props]
             self.assertIn(e.args[0], expected)
         except BaseException as e:
-            self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, e))
+            self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, repr(e)))
         else:
             self.fail('Expected exception about __{}__, passed instead.'.format(prop))
 
@@ -255,7 +273,7 @@ class TestBuiltins(unittest.TestCase):
         except TypeError as e:
             self.assertEqual(e.args[0], "cannot convert 'Poison' object to bytes")
         except BaseException as e:
-            self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, e))
+            self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, repr(e)))
         else:
             self.fail('Expected exception about __{}__, passed instead.'.format(prop))
 
@@ -269,7 +287,7 @@ class TestBuiltins(unittest.TestCase):
                     expected = 'Tried to access __{}__ on poison value.'.format(prop)
                     self.assertEqual(e.args[0], expected)
                 except BaseException as e:
-                    self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, e))
+                    self.fail('Expected exception about __{}__, got "{}" instead.'.format(prop, repr(e)))
                 else:
                     self.fail('Expected exception about __{}__, passed instead.'.format(prop))
 
@@ -282,7 +300,7 @@ class TestBuiltins(unittest.TestCase):
                     self.assertEqual(1, len(e.args))
                     self.assertEqual(e.args[0], msg)
                 except BaseException as e:
-                    self.fail('Expected TypeError({}), got "{}" instead.'.format(msg, e))
+                    self.fail('Expected TypeError({}), got "{}" instead.'.format(msg, repr(e)))
                 else:
                     self.fail('Expected TypeError({}), passed instead.'.format(msg))
 
@@ -305,18 +323,21 @@ class TestBuiltins(unittest.TestCase):
             # Version: (3, 6, 8) → Tried to access __index__ on poison value.
             # Version: (3, 7, 1) → Tried to access __iter__ on poison value.
             # Version: (3, 7, 3) → Tried to access __index__ on poison value.
+            # Version: (3, 8, 0) → Tried to access __index__ on poison value.
             lambda: bytes(poison()),
             # Version: (3, 5, 6) → Tried to access __len__ on poison value.
             # Version: (3, 6, 3) → cannot convert 'Poison' object to bytes
             # Version: (3, 6, 8) → Tried to access __index__ on poison value.
             # Version: (3, 7, 1) → cannot convert 'Poison' object to bytes
             # Version: (3, 7, 3) → Tried to access __index__ on poison value.
+            # Version: (3, 8, 0) → Tried to access __index__ on poison value.
             lambda: dict(poison()),
             # Version: (3, 5, 6) → Tried to access __iter__ on poison value.
             # Version: (3, 6, 3) → Tried to access __iter__ on poison value.
             # Version: (3, 6, 8) → Tried to access __iter__ on poison value.
             # Version: (3, 7, 1) → Tried to access __getattribute__ on poison value.
             # Version: (3, 7, 3) → Tried to access __getattribute__ on poison value.
+            # Version: (3, 8, 0) → Tried to access __getattribute__ on poison value.
             # Seems to depend on whether insertion order is guaranteed.  Great!
         ]
 
